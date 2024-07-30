@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>نموذج مالي</title>
+  <link rel="stylesheet" href="./financialStyle.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+  <div class="form-container">
+    <!-- <img src="awontech_logo.png" class="logo" alt="Company Logo" /> -->
+    
+
+    <h2>جمعية عون التقنية</h2>
+    <p>نموذج مالي</p>
+    <form id="financialForm">
+      <table>
+        <thead>
+          <tr>
+            <th>السادة</th>
+            <th>التاريخ</th>
+            <th>عنوان العميل</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><input type="text" name="name" placeholder="اسم العميل" /></td>
+            <td><input type="date" name="date" disabled /></td>
+            <td><input type="text" name="address" placeholder="عنوان العميل" /></td>
+          </tr>
+        </tbody>
+      </table>
+      <table id="itemsTable">
+        <thead>
+          <tr>
+            <th>رقم البند</th>
+            <th>الخدمة</th>
+            <th>سعر الخدمة</th>
+            <th>الكمية</th>
+            <th>السعر الإجمالي</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td><input type="text" name="service[]" placeholder="الخدمة" /></td>
+            <td><input type="text" name="price[]" placeholder="سعر الخدمة" /></td>
+            <td><input type="number" name="amount[]" value="1" min="1" placeholder="الكمية" /></td>
+            <td><span class="total">0.00</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div>المبلغ الإجمالي: <span id="totalAmount">0.00</span></div>
+      <button type="button" onclick="addRow()">إضافة بند</button>
+      <button type="button" onclick="downloadPDF()">تحميل كملف PDF</button>
+    </form>
+
+    <div class="additional-info">
+      <h3>بيان</h3>
+      <p>الأسعار الموضحة في الجدول بالريال السعودي. العرض صالح لمدة ٣ أيام عمل من تاريخ العرض. علماً بأن تمديد فترة اشتراك الدعم الفني يتطلب رسوم إضافية.</p>
+      <h3>سياسة الدفع</h3>
+      <p>1. يتم تحويل المبلغ على حسب الدفعات التالية:</p>
+      <ul>
+        <li>50% كدفعة أولى</li>
+        <li>30% كدفعة ثانية</li>
+        <li>20% كدفعة ثالثة</li>
+      </ul>
+      <p>2. يتم تحويل المبلغ إلى حساب جمعية عون التقنية - البنك الأهلي - IBAN SA3310000000200000444207</p>
+    </div>
+  </div>
+
+  <script>
+    // Function to add a new row to the items table
+    function addRow() {
+      var table = document.getElementById("itemsTable");
+      var rowCount = table.rows.length;
+      var newRow = table.insertRow(rowCount);
+      var cellCount = table.rows[0].cells.length;
+
+      for (var i = 0; i < cellCount; i++) {
+        var newCell = newRow.insertCell(i);
+        if (i === 0) {
+          newCell.innerHTML = rowCount; // Row number
+        } else if (i === 3) {
+          newCell.innerHTML =
+            '<input type="number" name="amount[]" value="1" min="1" placeholder="الكمية">';
+        } else if (i === 4) {
+          newCell.innerHTML = '<span class="total">0.00</span>';
+        } else if (i === 2) {
+          newCell.innerHTML =
+            '<input type="text" name="price[]" placeholder="سعر الخدمة">';
+        } else {
+          newCell.innerHTML =
+            '<input type="text" name="service[]" placeholder="الخدمة">';
+        }
+      }
+    }
+
+    // Function to normalize Arabic numbers to English numbers
+    function normalizeNumber(input) {
+      const arabicNumbers = [
+        "٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩",
+      ];
+      const englishNumbers = [
+        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+      ];
+
+      return input.split("").map((char) => {
+        const index = arabicNumbers.indexOf(char);
+        return index !== -1 ? englishNumbers[index] : char;
+      }).join("");
+    }
+
+    // Function to calculate totals and update display
+    function calculateTotals() {
+      var total = 0;
+      var rows = document.getElementById("itemsTable").rows;
+
+      for (var i = 1; i < rows.length; i++) {
+        var price = parseFloat(normalizeNumber(rows[i].cells[2].querySelector("input").value));
+        var amount = parseInt(normalizeNumber(rows[i].cells[3].querySelector("input").value));
+        var rowTotal = price * amount;
+        rows[i].cells[4].querySelector(".total").textContent = rowTotal.toFixed(2);
+        total += rowTotal;
+      }
+
+      document.getElementById("totalAmount").textContent = total.toFixed(2);
+    }
+
+    document.getElementById("itemsTable").addEventListener("input", calculateTotals);
+
+    // Function to download the form as PDF
+    function downloadPDF() {
+  const { jsPDF } = window.jspdf;
+  const buttons = document.querySelectorAll("button");
+  buttons.forEach(button => button.style.visibility = 'hidden');
+
+  // Create a new jsPDF instance
+  const doc = new jsPDF('p', 'pt', 'a4');
+
+  // Create a promise to ensure the image is loaded
+  const imageLoadPromise = new Promise((resolve, reject) => {
+    const img = new Image();
+    img.src = 'awontech_logo.png';
+    img.onload = () => resolve(img);
+    img.onerror = () => reject('Image failed to load');
+  });
+
+  imageLoadPromise.then((img) => {
+    // Ensure the logo image is properly handled if needed
+    const logoWidth = img.width;
+    const logoHeight = img.height;
+
+    // Capture the .form-container as canvas
+    html2canvas(document.querySelector(".form-container"), { 
+      useCORS: true,
+      logging: true
+    }).then((canvas) => {
+      const imgData = canvas.toDataURL("image/png");
+      console.log('Image Data:', imgData);
+      
+      // Dimensions for A4 paper
+      const pdfWidth = 595.28;
+      const pdfHeight = 841.89;
+      
+      // Calculate image dimensions for the PDF
+      const imgWidth = pdfWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      // Add the image to the PDF
+      doc.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+
+      // Check if the image is larger than one page
+      if (imgHeight > pdfHeight) {
+        const pages = Math.ceil(imgHeight / pdfHeight);
+        
+        for (let i = 1; i < pages; i++) {
+          doc.addPage();
+          doc.addImage(imgData, "PNG", 0, -pdfHeight * i, imgWidth, imgHeight);
+        }
+      }
+      
+      // Save the PDF
+      doc.save("نموذج_مالي.pdf");
+
+      // Show all buttons again
+      buttons.forEach(button => button.style.visibility = 'visible');
+    }).catch((error) => {
+      console.error('Error generating PDF:', error);
+      buttons.forEach(button => button.style.visibility = 'visible');
+    });
+  }).catch((error) => {
+    console.error('Error loading image:', error);
+    buttons.forEach(button => button.style.visibility = 'visible');
+  });
+}
+
+
+
+
+  </script>
+</body>
+</html>
